@@ -1,0 +1,54 @@
+# Advanced Makefile example demonstrating key Make concepts
+# `make -f adv-mk` to use this file instead of default "Makefile"
+
+# Stores reusable target value that can be referenced with $(TARGET)
+TARGET = calculator
+
+# ?= assigns only if variable is undefined (vs = which always assigns)
+# This allows overriding from command line: make -f adv-mk run ARGS="15 5"
+ARGS ?= 15 5  # Default command line arguments for calculator
+
+# $(wildcard *.c) expands to all .c files in current directory
+SRCS = $(wildcard *.c)
+
+# Creates list of object files by replacing .c extension with .o in all source files
+OBJS = $(SRCS:.c=.o)
+
+# Compiler configuration
+CC = gcc
+CFLAGS = -Wall -Wextra
+
+# Target depends on all object files
+# Make will automatically build dependencies first (the .o files)
+# $@ = target name (calculator), $(OBJS) = prerequisite list
+$(TARGET): $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $(OBJS)
+
+# Template for building any .o from corresponding .c
+# $< = first prerequisite (the .c file), $@ = target (the .o file)
+# Make automatically invokes this rule when .o files are needed
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# .PHONY prevents Make from looking for files named 'all', 'run', etc.
+# Without this, if a file named 'clean' existed, 'make clean' would do nothing
+.PHONY: all run debug clean
+
+# Default target which runs when just 'make -f adv-mk' is called
+# Builds the executable by depending on $(TARGET)
+all: $(TARGET)
+
+# Build and immediately runs $(TARGET)
+run: $(TARGET)
+	./$(TARGET) $(ARGS)
+
+# Builds with debug symbols and launches GDB debugger
+# Make combines both debug: lines - variable assignment where dependency normally goes, then actual dependency
+debug: CFLAGS += -g -O0  # -g adds debug symbols, -O0 disables optimization
+debug: $(TARGET)
+	gdb --args ./$(TARGET) $(ARGS)
+
+# Remove generated files
+clean: 
+	rm -f $(TARGET) $(OBJS)
+
